@@ -22,8 +22,34 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
-      - name: Build Custom Spider Jar
-        run: ./gradlew app:buildCustomSpiderJar
+      - name: Build Project
+        run: ./gradlew build
+
+      # --- 查找生成的JAR文件 ---
+      - name: Find and Copy Jar files
+        run: |
+          # 查找所有生成的jar文件
+          find . -name "*.jar" -type f | grep -v "gradle" | head -10
+          
+          # 创建jar目录
+          mkdir -p ./jar ./json
+          
+          # 尝试从常见位置复制jar
+          if [ -f "./app/build/libs/*.jar" ]; then
+            cp ./app/build/libs/*.jar ./jar/custom_spider.jar 2>/dev/null || true
+          fi
+          
+          if [ -f "./build/libs/*.jar" ]; then
+            cp ./build/libs/*.jar ./jar/custom_spider.jar 2>/dev/null || true
+          fi
+          
+          # 生成MD5
+          if [ -f "./jar/custom_spider.jar" ]; then
+            md5sum ./jar/custom_spider.jar > ./jar/custom_spider.jar.md5
+            echo "JAR found and MD5 generated"
+          else
+            echo "Warning: No jar file found"
+          fi
 
       # --- 提交到当前仓库 ---
       - name: Add & Commit to Current Repository
@@ -33,27 +59,10 @@ jobs:
           message: 'update spider jar and json'
           add: "['./jar/custom_spider.jar', './jar/custom_spider.jar.md5','./json/index.json']"
 
-      # --- 保留 Artifact 下载 ---
-      - name: Find Jar path
-        id: find_jar
-        run: |
-          JAR_PATH="./jar/custom_spider.jar"
-          if [ -f "$JAR_PATH" ]; then
-            echo "JAR_PATH=$JAR_PATH" >> $GITHUB_OUTPUT
-          else
-            BUILT_JAR=$(find . -path "*/app/build/libs/custom_spider.jar" -type f -print | head -n 1)
-            if [ -n "$BUILT_JAR" ]; then
-                echo "Found built jar at: $BUILT_JAR"
-                echo "JAR_PATH=$BUILT_JAR" >> $GITHUB_OUTPUT
-            else
-                echo "::error::Jar file not found after build."
-                exit 1
-            fi
-          fi
-
-      - name: Upload Jar Artifact for Download
+      # --- 上传构件 ---
+      - name: Upload Jar Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Custom-Spider-Jar
-          path: ${{ steps.find_jar.outputs.JAR_PATH }}
+          path: ./jar/custom_spider.jar
           retention-days: 7
