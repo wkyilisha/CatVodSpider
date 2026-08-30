@@ -2,7 +2,7 @@ name: Spider Jar Gen CI (Simplified)
 
 on:
   push:
-    branches: [ "multiThread" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -33,33 +33,7 @@ jobs:
           message: 'update spider jar and json'
           add: "['./jar/custom_spider.jar', './jar/custom_spider.jar.md5','./json/index.json']"
 
-      # --- 新增：推送到目标仓库 https://github.com/yilishawk/js.git ---
-      - name: Push Jar to yilishawk/js Repository
-        env:
-          TARGET_PAT: ${{ secrets.TARGET_PAT }}   # 推荐使用 Secrets 方式
-        run: |
-          echo "Preparing to push to target repository..."
-
-          # 创建临时目录并克隆目标仓库
-          mkdir -p target_repo
-          cd target_repo
-          git clone https://x-access-token:${TARGET_PAT}@github.com/yilishawk/js.git .
-          
-          # 复制需要推送的文件
-          cp ../jar/custom_spider.jar ./ 2>/dev/null || echo "Warning: custom_spider.jar not found"
-          cp ../jar/custom_spider.jar.md5 ./ 2>/dev/null || echo "Warning: md5 file not found"
-          cp ../json/index.json ./ 2>/dev/null || echo "Warning: index.json not found"
-          
-          # 提交并推送
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          
-          git add -A
-          git commit -m "Update spider jar and json from build" || echo "No changes to commit"
-          git push origin main || git push origin master
-        continue-on-error: true   # 如果没有变化也不失败
-
-      # --- 保留原来的 Artifact 下载 ---
+      # --- 保留 Artifact 下载 ---
       - name: Find Jar path
         id: find_jar
         run: |
